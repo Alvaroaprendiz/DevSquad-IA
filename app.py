@@ -3,6 +3,7 @@
 Ejecutar:  streamlit run app.py
 """
 import html
+import io
 import os
 import socket
 import time
@@ -267,6 +268,19 @@ def url_celular() -> str:
     return base.split("?")[0].rstrip("/") + "/?modo=celular"
 
 
+def reducir_foto(datos: bytes, tipo: str | None) -> tuple[bytes, str]:
+    """Las fotos de celular pesan varios MB: se reducen a 1600 px en JPEG para subir y procesar rápido."""
+    try:
+        from PIL import Image, ImageOps
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(datos))).convert("RGB")
+        img.thumbnail((1600, 1600))
+        salida = io.BytesIO()
+        img.save(salida, "JPEG", quality=85)
+        return salida.getvalue(), "image/jpeg"
+    except Exception:  # formato que Pillow no abre (p. ej. HEIC): se manda tal cual, Gemini lo entiende
+        return datos, tipo or "image/jpeg"
+
+
 def pagina_celular(buzon: Buzon):
     """Página sencilla para el voluntario: toma la foto del dibujo y la envía a la pantalla."""
     st.markdown("""
@@ -276,12 +290,13 @@ def pagina_celular(buzon: Buzon):
       <h1>Envía el<br><em>boceto</em>.</h1>
       <p>Toma una foto clara de la hoja y envíala. El equipo empezará a trabajar en la pantalla.</p>
     </div>""", unsafe_allow_html=True)
-    foto = st.file_uploader("Foto del boceto", type=["png", "jpg", "jpeg", "webp", "heic"])
+    foto = st.file_uploader("Foto del boceto", type=["png", "jpg", "jpeg", "webp", "heic", "heif"])
     if foto:
         st.image(foto, use_container_width=True)
     nota = st.text_input("Comentario (opcional)", placeholder="Ej. que tenga niveles")
     if st.button("Enviar a DevSquad", type="primary", disabled=not foto, use_container_width=True):
-        buzon.depositar(foto.getvalue(), foto.type or "image/jpeg", nota)
+        imagen, tipo = reducir_foto(foto.getvalue(), foto.type)
+        buzon.depositar(imagen, tipo, nota)
         st.success("Recibido. Mira la pantalla.")
 
 
@@ -396,7 +411,7 @@ with tab_proyecto:
         c1, c2 = st.columns([3, 1.1], gap="large")
         idea = c1.text_area("Descripción de la idea", height=96,
                             placeholder="Un juego donde el jugador atrapa estrellas que caen y evita bombas.")
-        boceto = c2.file_uploader("Boceto (opcional)", type=["png", "jpg", "jpeg", "webp"])
+        boceto = c2.file_uploader("Boceto (opcional)", type=["png", "jpg", "jpeg", "webp", "heic", "heif"])
         if boceto:
             c2.image(boceto, use_container_width=True)
         iniciar = st.button("Iniciar proyecto", type="primary", disabled=not (idea or boceto))
@@ -409,8 +424,8 @@ with tab_proyecto:
         if entrada:
             proyecto = Proyecto(entrada.nota, entrada.imagen, entrada.tipo)
         else:
-            proyecto = Proyecto(idea.strip(), boceto.getvalue() if boceto else None,
-                                boceto.type if boceto else "image/png")
+            imagen, tipo = reducir_foto(boceto.getvalue(), boceto.type) if boceto else (None, "image/png")
+            proyecto = Proyecto(idea.strip(), imagen, tipo)
         st.session_state.update(historial=[], proyecto=None, estados={}, boceto_img=proyecto.imagen)
         empresa = Empresa("DevSquad", modelo)
         estados, inicio = {}, time.time()

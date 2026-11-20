@@ -8,3 +8,10 @@ font = "sans serif"
 
 [client]
 toolbarMode = "minimal"
+
+[server]
+# En Streamlit Cloud la app va dentro de un iframe y los navegadores de celular bloquean la
+# cookie XSRF, lo que hace que subir fotos falle con error 403. Se desactiva para permitirlo.
+enableXsrfProtection = false
+enableCORS = false
+maxUploadSize = 25
