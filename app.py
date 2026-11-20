@@ -188,9 +188,9 @@ def mermaid(codigo: str, alto: int = 460):
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
     <script>
       mermaid.initialize({{startOnLoad: false, theme: 'base', themeVariables: {{
-        background: '#13120F', primaryColor: '#13120F', primaryTextColor: '#ECE6D9', primaryBorderColor: '#4A443A',
-        lineColor: '#6B655A', secondaryColor: '#13120F', tertiaryColor: '#13120F', fontSize: '13px',
-        fontFamily: 'Inter, Segoe UI, sans-serif', textColor: '#8A8377' }} }});
+        background: '#13120F', primaryColor: '#13120F', primaryTextColor: '#ECE6D9', primaryBorderColor: '#8A8377',
+        lineColor: '#B5AD9E', secondaryColor: '#13120F', tertiaryColor: '#13120F', fontSize: '13px',
+        fontFamily: 'Inter, Segoe UI, sans-serif', textColor: '#CFC8BA' }} }});
       // espera a que el iframe sea visible (las pestañas ocultas miden 0 y mermaid falla)
       const dibujar = () => document.body.clientWidth > 0 ? mermaid.run() : setTimeout(dibujar, 300);
       dibujar();
