@@ -1,4 +1,5 @@
 """La Empresa coordina a los agentes (composición: la empresa TIENE empleados)."""
+import os
 from typing import Iterator
 
 from .agentes import CEO, Arquitecto, Agente, ProductManager, Programador, Tester
@@ -51,6 +52,6 @@ class Empresa:
         estado = "aprobado por QA" if proyecto.aprobado else "entregado con observaciones de QA"
         yield Mensaje(self.ceo.nombre, self.ceo.rol,
                       f"Proyecto {estado} tras {proyecto.intentos} iteración(es). "
-                      f"Archivo: {proyecto.archivo}", "final")
+                      f"Archivo: {os.path.basename(proyecto.archivo)}", "final")
         if abrir_al_final:
             self.abrir.usar(proyecto.archivo)

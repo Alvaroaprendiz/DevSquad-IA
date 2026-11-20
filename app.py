@@ -259,15 +259,12 @@ def reducir_foto(datos: bytes, tipo: str | None) -> tuple[bytes, str]:
 # ---------------------------------------------------------------- página
 st.markdown(CSS, unsafe_allow_html=True)
 
-with st.sidebar:
-    st.markdown('<div class="eyebrow">Configuración</div>', unsafe_allow_html=True)
+MOTORES = ["Gemini (capa gratuita)", "Claude (Anthropic)", "Modo demo (sin conexión)"]
+if "motor" not in st.session_state:  # el selector está al final de la página (sección Configuración)
     hay_key = bool(os.getenv("GEMINI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
-    opcion = st.selectbox("Motor de IA", ["Gemini (capa gratuita)", "Claude (Anthropic)", "Modo demo (sin conexión)"],
-                          index=0 if hay_key else 2)
-    proveedor = {"Gemini": "gemini", "Claude": "claude", "Modo d": "demo"}[opcion[:6]]
-    modelo = crear_modelo(proveedor)
-    if proveedor != "demo" and type(modelo).__name__ == "ModeloDemo":
-        st.caption("No se encontró la API key en el archivo .env. Se usa el modo demo.")
+    st.session_state.motor = MOTORES[0] if hay_key else MOTORES[2]
+proveedor = {"Gemini": "gemini", "Claude": "claude", "Modo d": "demo"}[st.session_state.motor[:6]]
+modelo = crear_modelo(proveedor)
 
 empresa_base = Empresa("DevSquad", modelo)
 conectado = type(modelo).__name__ != "ModeloDemo"
@@ -377,3 +374,12 @@ with tab_proyecto:
             st.code(proyecto.codigo, language="html")
         with t5:
             st.markdown(proyecto.reporte_qa or "Sin reporte.")
+
+# ---------------------------------------------------------------- configuración
+st.markdown('<div class="section">Configuración</div>', unsafe_allow_html=True)
+c_motor, c_info = st.columns([1, 2], gap="large")
+c_motor.selectbox("Motor de IA", MOTORES, key="motor")
+if proveedor != "demo" and not conectado:
+    c_info.caption("No se encontró la API key; se usa el modo demo.")
+else:
+    c_info.caption("Si falla el internet o se agota la cuota gratuita, cambia a «Modo demo (sin conexión)».")
