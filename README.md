@@ -51,11 +51,9 @@ streamlit run app.py
 Se abre en el navegador. Escribe tu idea (o sube la foto de la servilleta) y presiona
 **Iniciar proyecto**. En la pestaña **Arquitectura del sistema** está el diagrama de clases del sistema.
 
-**Modo presentación (boceto desde un celular):**
-1. Activa el interruptor **Modo presentación** en la sección *Encargo*.
-2. Un voluntario dibuja la idea en una hoja (hay una cuenta regresiva de 10 segundos en pantalla).
-3. Otro voluntario escanea el código QR, toma la foto de la hoja y presiona **Enviar a DevSquad**.
-4. La pantalla recibe la foto y el equipo empieza a trabajar solo.
+**Con un dibujo:** sube la foto de la hoja en **Foto del dibujo** (o activa **Tomar la foto con la
+cámara**) y presiona **Iniciar proyecto**. Lo que escribas en la hoja (por ejemplo "crea un juego de...")
+se toma como la instrucción y el dibujo como la guía visual.
 
 **Consola:**
 ```bash
@@ -78,7 +76,6 @@ devsquad/
 ├── herramientas.py Herramienta (abstracta) → ValidadorCodigo, GuardarArchivo, AbrirNavegador
 ├── empresa.py      Empresa: tiene a los 5 agentes y coordina el trabajo
 ├── mensajes.py     Mensaje y Proyecto (dataclasses)
-├── buzon.py        Buzon: recibe la foto que manda el celular (compartido entre sesiones)
 └── demo.py         respuestas del modo demo
 app.py              página web (Streamlit)
 main.py             versión de consola

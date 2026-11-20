@@ -5,17 +5,14 @@ Ejecutar:  streamlit run app.py
 import html
 import io
 import os
-import socket
 import time
 from pathlib import Path
 
-import segno
 import streamlit as st
 import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 from devsquad import Empresa, Mensaje, Proyecto, crear_modelo
-from devsquad.buzon import Buzon
 
 load_dotenv(Path(__file__).with_name(".env"))
 st.set_page_config(page_title="DevSquad", layout="wide", initial_sidebar_state="collapsed")
@@ -129,7 +126,6 @@ code, pre, code *, pre * { font-family: ui-monospace, 'SFMono-Regular', Consolas
 .empty { text-align: center; padding: 54px 0; color: var(--faint); font-family: 'Cormorant Garamond', serif !important;
          font-style: italic; font-size: 19px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .stToggle label p { font-size: 13px !important; color: var(--text) !important; }
-.hero.movil h1 { font-size: 46px; }
 @media (max-width: 700px) {
   .block-container { padding-top: 1.6rem; }
   .hero h1 { font-size: 42px; }
@@ -247,32 +243,6 @@ def kpis(proyecto: Proyecto, duracion: float) -> str:
         f'<div class="kpi"><div class="label">{k}</div><div class="value">{v}</div></div>' for k, v in datos) + "</div>"
 
 
-@st.cache_resource
-def buzon_compartido() -> Buzon:
-    """Un solo buzón para todo el servidor: lo comparten el celular y la pantalla."""
-    return Buzon()
-
-
-def url_celular() -> str:
-    """Link que abre el celular (va dentro del código QR)."""
-    base = os.getenv("PUBLIC_URL") or str(getattr(st.context, "url", "") or "http://localhost:8501")
-    if "localhost" in base or "127.0.0.1" in base:  # en la red local se usa la IP de esta computadora
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            base = base.replace("localhost", ip).replace("127.0.0.1", ip)
-        except OSError:
-            pass
-    base = base.split("?")[0].split("/~/")[0].rstrip("/")
-    if base.endswith(".streamlit.app"):
-        # en Streamlit Cloud la app normal va dentro de un iframe y los celulares bloquean ahí la
-        # subida de fotos; la ruta /~/+/ abre la app directa, sin iframe
-        base += "/~/+"
-    return base + "/?modo=celular"
-
-
 def reducir_foto(datos: bytes, tipo: str | None) -> tuple[bytes, str]:
     """Las fotos de celular pesan varios MB: se reducen a 1600 px en JPEG para subir y procesar rápido."""
     try:
@@ -286,85 +256,8 @@ def reducir_foto(datos: bytes, tipo: str | None) -> tuple[bytes, str]:
         return datos, tipo or "image/jpeg"
 
 
-def pagina_celular(buzon: Buzon):
-    """Página sencilla para el voluntario: toma la foto del dibujo y la envía a la pantalla."""
-    st.markdown("""
-    <div class="hero movil">
-      <div class="eyebrow">DevSquad &nbsp;·&nbsp; Casa de software</div>
-      <div class="rule"></div>
-      <h1>Envía el<br><em>boceto</em>.</h1>
-      <p>Toma una foto clara de la hoja y envíala. El equipo empezará a trabajar en la pantalla.</p>
-    </div>""", unsafe_allow_html=True)
-    foto = st.file_uploader("Foto del boceto", type=["png", "jpg", "jpeg", "webp", "heic", "heif"])
-    if foto:
-        st.image(foto, use_container_width=True)
-    nota = st.text_input("Comentario (opcional)", placeholder="Ej. que tenga niveles")
-    if st.button("Enviar a DevSquad", type="primary", disabled=not foto, use_container_width=True):
-        imagen, tipo = reducir_foto(foto.getvalue(), foto.type)
-        buzon.depositar(imagen, tipo, nota)
-        st.success("Recibido. Mira la pantalla.")
-
-
-def cuenta_regresiva(segundos: int = 10):
-    components.html(f"""
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Inter:wght@400&display=swap" rel="stylesheet">
-    <style>
-      body {{ margin:0; background:transparent; text-align:center; font-family:Inter,sans-serif; }}
-      #n {{ font-family:'Cormorant Garamond',Georgia,serif; font-size:132px; line-height:1; color:#ECE6D9;
-            font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }}
-      #n.fin {{ color:#A89270; font-size:64px; padding:34px 0; }}
-      button {{ margin-top:14px; background:transparent; color:#CFC8BA; border:1px solid #34302A; padding:11px 22px;
-               font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; cursor:pointer; font-family:Inter,sans-serif; }}
-      button:hover {{ border-color:#A89270; color:#ECE6D9; }}
-    </style>
-    <div id="n">{segundos}</div>
-    <button id="b">Iniciar cuenta regresiva</button>
-    <script>
-      const n = document.getElementById('n'), b = document.getElementById('b'); let t;
-      b.onclick = () => {{
-        clearInterval(t); let s = {segundos}; n.className = ''; n.textContent = s; b.textContent = 'Reiniciar';
-        t = setInterval(() => {{ s--; if (s <= 0) {{ clearInterval(t); n.className = 'fin'; n.textContent = 'Tiempo'; }}
-                                 else n.textContent = s; }}, 1000);
-      }};
-    </script>""", height=230)
-
-
-def panel_presentacion(buzon: Buzon):
-    url = url_celular()
-    qr = segno.make(url, error="m").svg_inline(scale=7, dark="#ECE6D9", light=None, border=0)
-    c1, c2, c3 = st.columns([1, 1, 1], gap="large")
-    with c1:
-        st.markdown('<div class="label" style="color:#8A8377">I &nbsp;·&nbsp; El voluntario dibuja</div>',
-                    unsafe_allow_html=True)
-        cuenta_regresiva(10)
-    with c2:
-        st.markdown(f'<div class="label" style="color:#8A8377">II &nbsp;·&nbsp; Escanea y envía la foto</div>'
-                    f'<div style="margin-top:18px;text-align:center">{qr}</div>'
-                    f'<div style="text-align:center;margin-top:10px;font-size:11px;color:#5B564D">{html.escape(url)}</div>',
-                    unsafe_allow_html=True)
-    with c3:
-        st.markdown('<div class="label" style="color:#8A8377">III &nbsp;·&nbsp; El equipo trabaja</div>',
-                    unsafe_allow_html=True)
-        vigilar_buzon(buzon)
-
-
-@st.fragment(run_every=2)
-def vigilar_buzon(buzon: Buzon):
-    """Cada 2 segundos revisa si el celular ya mandó la foto; si sí, arranca el proyecto."""
-    if buzon.tiene_algo:
-        st.session_state.entrada = buzon.retirar()
-        st.rerun(scope="app")
-    st.markdown('<div class="empty" style="margin-top:18px;padding:70px 0">Esperando el boceto…</div>',
-                unsafe_allow_html=True)
-
-
 # ---------------------------------------------------------------- página
 st.markdown(CSS, unsafe_allow_html=True)
-buzon = buzon_compartido()
-
-if st.query_params.get("modo") == "celular":
-    pagina_celular(buzon)
-    st.stop()
 
 with st.sidebar:
     st.markdown('<div class="eyebrow">Configuración</div>', unsafe_allow_html=True)
@@ -408,29 +301,22 @@ with tab_sistema:
 with tab_proyecto:
     pipe_ph = st.empty()
     st.markdown('<div class="section">Encargo</div>', unsafe_allow_html=True)
-    en_vivo = st.toggle("Modo presentación: recibir el boceto desde un celular")
-    if en_vivo:
-        panel_presentacion(buzon)
-        iniciar, idea, boceto = False, "", None
-    else:
-        c1, c2 = st.columns([3, 1.1], gap="large")
-        idea = c1.text_area("Descripción de la idea", height=96,
-                            placeholder="Un juego donde el jugador atrapa estrellas que caen y evita bombas.")
-        boceto = c2.file_uploader("Boceto (opcional)", type=["png", "jpg", "jpeg", "webp", "heic", "heif"])
-        if boceto:
-            c2.image(boceto, use_container_width=True)
-        iniciar = st.button("Iniciar proyecto", type="primary", disabled=not (idea or boceto))
+    c1, c2 = st.columns([3, 1.1], gap="large")
+    idea = c1.text_area("Descripción de la idea (opcional si subes un dibujo)", height=96,
+                        placeholder="Un juego donde el jugador atrapa estrellas que caen y evita bombas.")
+    boceto = c2.file_uploader("Foto del dibujo", type=["png", "jpg", "jpeg", "webp", "heic", "heif"])
+    if c2.toggle("Tomar la foto con la cámara"):
+        boceto = c1.camera_input("Cámara", label_visibility="collapsed") or boceto
+    if boceto:
+        c2.image(boceto, use_container_width=True)
+    iniciar = st.button("Iniciar proyecto", type="primary", disabled=not (idea or boceto))
 
     st.markdown('<div class="section">Bitácora</div>', unsafe_allow_html=True)
     feed = st.container()
 
-    entrada = st.session_state.pop("entrada", None)  # foto que llegó desde el celular
-    if iniciar or entrada:
-        if entrada:
-            proyecto = Proyecto(entrada.nota, entrada.imagen, entrada.tipo)
-        else:
-            imagen, tipo = reducir_foto(boceto.getvalue(), boceto.type) if boceto else (None, "image/png")
-            proyecto = Proyecto(idea.strip(), imagen, tipo)
+    if iniciar:
+        imagen, tipo = reducir_foto(boceto.getvalue(), boceto.type) if boceto else (None, "image/png")
+        proyecto = Proyecto(idea.strip(), imagen, tipo)
         st.session_state.update(historial=[], proyecto=None, estados={}, boceto_img=proyecto.imagen)
         empresa = Empresa("DevSquad", modelo)
         estados, inicio = {}, time.time()
