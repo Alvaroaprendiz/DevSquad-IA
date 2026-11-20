@@ -5,6 +5,7 @@
 - Cada rol HEREDA de Agente y sobrescribe trabajar() a su manera (polimorfismo):
   la Empresa solo llama agente.trabajar(proyecto) sin saber qué tipo de agente es.
 """
+import html
 import re
 from abc import ABC, abstractmethod
 from typing import Iterator
@@ -146,8 +147,20 @@ class Programador(Agente):
                 "en pantalla y puntuación). Si es un juego NO debe empezar solo: muestra una pantalla de inicio "
                 "con un botón 'Jugar', y al perder un botón 'Jugar de nuevo' que reinicie dentro del mismo "
                 "juego (nunca pidas recargar la página ni presionar F5). El canvas debe recibir el foco del "
-                "teclado al hacer clic. Diseño limpio y moderno, textos en español. Responde SOLO con un "
-                "bloque ```html.")
+                "teclado al hacer clic. Diseño limpio y moderno, textos en español. Usa <meta charset=\"UTF-8\"> "
+                "y escribe los acentos y la ñ directamente (á, é, ñ, ¿), NUNCA como entidades HTML (&aacute;). "
+                "Responde SOLO con un bloque ```html.")
+
+    @staticmethod
+    def limpiar_acentos(codigo: str) -> str:
+        """Dentro de <script> las entidades como &oacute; no se convierten y se ven tal cual en pantalla.
+        Se reemplazan por el carácter real (solo letras acentuadas, ñ y signos del español)."""
+        entidad = re.compile(r"&(?:[aeiouAEIOU](?:acute|uml)|[nN]tilde|iquest|iexcl|ordm|ordf|deg|laquo|raquo);")
+
+        def arreglar(m):
+            return entidad.sub(lambda e: html.unescape(e.group(0)), m.group(0))
+
+        return re.sub(r"<script[\s\S]*?</script>", arreglar, codigo, flags=re.IGNORECASE)
 
     def trabajar(self, proyecto):
         if proyecto.errores:
@@ -159,7 +172,7 @@ class Programador(Agente):
                       f"Requisitos:\n{proyecto.requisitos}\n\nDiagrama de clases:\n"
                       f"```mermaid\n{proyecto.diseno_uml}\n```")
             aviso = "Primera versión lista. Envío la versión {n} a revisión"
-        proyecto.codigo = self.bloque(self.pensar(pedido, proyecto), "html")
+        proyecto.codigo = self.limpiar_acentos(self.bloque(self.pensar(pedido, proyecto), "html"))
         proyecto.intentos += 1
         lineas = proyecto.codigo.count("\n") + 1
         yield self.decir(aviso.format(n=proyecto.intentos) + f" ({lineas} líneas de código).")
