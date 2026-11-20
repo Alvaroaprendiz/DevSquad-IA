@@ -14,9 +14,12 @@ from .mensajes import Mensaje, Proyecto
 from .modelos import ModeloIA
 
 ESTILO = "Escribe en español, con tono profesional y sin emojis."
-REGLA_BOCETO = ("El cliente entregó un boceto dibujado a mano (imagen adjunta). El boceto manda: respeta los "
-                "elementos, textos escritos, distribución en pantalla, colores y mecánicas que aparecen en el "
-                "dibujo. No lo cambies por otra idea ni agregues cosas que contradigan lo dibujado.")
+REGLA_BOCETO = ("El cliente entregó un boceto dibujado a mano (imagen adjunta). Léelo así: las notas escritas "
+                "(por ejemplo 'crea un juego de...') son la INSTRUCCIÓN de lo que quiere; los dibujos son la "
+                "GUÍA VISUAL de personajes, pantallas, títulos y acomodo. Respeta ambos y no lo cambies por otra "
+                "idea. Pero el boceto es un plano, no el producto: el resultado debe ser FUNCIONAL e interactivo "
+                "(si es un juego: controles, objetivo, enemigos u obstáculos, puntos, ganar o perder), nunca "
+                "una copia estática del dibujo.")
 
 
 class Agente(ABC):
@@ -97,7 +100,9 @@ class ProductManager(Agente):
         return ("Eres Product Manager. A partir del resumen de la CEO escribe entre 4 y 6 historias de "
                 "usuario con el formato 'Como <usuario> quiero <acción> para <beneficio>'. Debajo de cada "
                 "una agrega sus criterios de aceptación: condiciones concretas y verificables que el "
-                "Tester usará para aprobar el producto. Todo debe caber en un solo archivo HTML sin "
+                "Tester usará para aprobar el producto. La mayoría de las historias deben describir "
+                "INTERACCIÓN y funcionamiento (qué hace el usuario y qué responde el sistema), no solo "
+                "cómo se ve. Todo debe caber en un solo archivo HTML sin "
                 "recursos externos. Responde solo con la lista en Markdown simple (texto, negritas y viñetas). "
                 "No escribas código, HTML ni bloques ```; tú solo escribes requisitos, el código lo hace otro.")
 
@@ -137,7 +142,9 @@ class Programador(Agente):
         return ("Eres ingeniero de software senior. Escribe el producto COMPLETO en un solo archivo HTML "
                 "con el CSS y el JavaScript adentro, sin librerías ni imágenes externas (dibuja con canvas "
                 "o CSS, no uses emojis). Implementa las clases del diagrama con 'class' de JavaScript. "
-                "Diseño limpio y moderno, textos en español. Responde SOLO con un bloque ```html.")
+                "Debe ser totalmente funcional e interactivo desde que se abre (si es un juego: jugable, con "
+                "controles explicados en pantalla, puntuación y reinicio). Diseño limpio y moderno, textos en "
+                "español. Responde SOLO con un bloque ```html.")
 
     def trabajar(self, proyecto):
         if proyecto.errores:
