@@ -146,3 +146,4 @@ el sistema no depende de una sola empresa de IA.
 
 ## Equipo
 - Álvaro Joseph Ramírez Pulido
+- Samuel Zareth Nuño Cisneros
