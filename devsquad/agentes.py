@@ -142,9 +142,12 @@ class Programador(Agente):
         return ("Eres ingeniero de software senior. Escribe el producto COMPLETO en un solo archivo HTML "
                 "con el CSS y el JavaScript adentro, sin librerías ni imágenes externas (dibuja con canvas "
                 "o CSS, no uses emojis). Implementa las clases del diagrama con 'class' de JavaScript. "
-                "Debe ser totalmente funcional e interactivo desde que se abre (si es un juego: jugable, con "
-                "controles explicados en pantalla, puntuación y reinicio). Diseño limpio y moderno, textos en "
-                "español. Responde SOLO con un bloque ```html.")
+                "Debe ser totalmente funcional e interactivo (si es un juego: jugable, con controles explicados "
+                "en pantalla y puntuación). Si es un juego NO debe empezar solo: muestra una pantalla de inicio "
+                "con un botón 'Jugar', y al perder un botón 'Jugar de nuevo' que reinicie dentro del mismo "
+                "juego (nunca pidas recargar la página ni presionar F5). El canvas debe recibir el foco del "
+                "teclado al hacer clic. Diseño limpio y moderno, textos en español. Responde SOLO con un "
+                "bloque ```html.")
 
     def trabajar(self, proyecto):
         if proyecto.errores:
