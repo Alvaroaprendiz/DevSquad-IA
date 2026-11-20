@@ -265,7 +265,12 @@ def url_celular() -> str:
             base = base.replace("localhost", ip).replace("127.0.0.1", ip)
         except OSError:
             pass
-    return base.split("?")[0].rstrip("/") + "/?modo=celular"
+    base = base.split("?")[0].split("/~/")[0].rstrip("/")
+    if base.endswith(".streamlit.app"):
+        # en Streamlit Cloud la app normal va dentro de un iframe y los celulares bloquean ahí la
+        # subida de fotos; la ruta /~/+/ abre la app directa, sin iframe
+        base += "/~/+"
+    return base + "/?modo=celular"
 
 
 def reducir_foto(datos: bytes, tipo: str | None) -> tuple[bytes, str]:
