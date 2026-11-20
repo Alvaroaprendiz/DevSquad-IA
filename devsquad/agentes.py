@@ -14,6 +14,9 @@ from .mensajes import Mensaje, Proyecto
 from .modelos import ModeloIA
 
 ESTILO = "Escribe en español, con tono profesional y sin emojis."
+REGLA_BOCETO = ("El cliente entregó un boceto dibujado a mano (imagen adjunta). El boceto manda: respeta los "
+                "elementos, textos escritos, distribución en pantalla, colores y mecánicas que aparecen en el "
+                "dibujo. No lo cambies por otra idea ni agregues cosas que contradigan lo dibujado.")
 
 
 class Agente(ABC):
@@ -39,10 +42,15 @@ class Agente(ABC):
         return self.nombre[:2].upper()
 
     def pensar(self, mensaje: str, proyecto: Proyecto | None = None) -> str:
+        """Le pregunta al modelo. Si el proyecto trae boceto, el agente también lo ve."""
         imagen = proyecto.imagen if proyecto else None
         tipo = proyecto.imagen_tipo if proyecto else "image/png"
-        return self.modelo.generar(f"[ROL:{self.rol}]\n{self.instrucciones}\n{ESTILO}",
-                                   mensaje, imagen, tipo)
+        sistema = f"[ROL:{self.rol}]\n{self.instrucciones}\n{ESTILO}"
+        if imagen:
+            sistema += "\n" + REGLA_BOCETO
+        if proyecto and proyecto.idea and proyecto.idea not in mensaje:
+            mensaje = f"Pedido original del cliente: {proyecto.idea}\n\n{mensaje}"
+        return self.modelo.generar(sistema, mensaje, imagen, tipo)
 
     def decir(self, texto: str, tipo: str = "texto") -> Mensaje:
         return Mensaje(self.nombre, self.rol, texto, tipo)
@@ -69,9 +77,11 @@ class CEO(Agente):
     @property
     def instrucciones(self):
         return ("Eres la directora de una empresa de software. Un cliente te trae una idea (en texto o "
-                "en la foto de un boceto). Resúmela en 2 o 3 frases: qué quiere, para quién es y cuál es "
-                "el objetivo del producto. Si la idea es muy grande, define un alcance que se pueda "
-                "construir en un solo archivo HTML.")
+                "en la foto de un boceto). Si hay boceto, primero describe con precisión lo que está "
+                "dibujado: cada elemento, el texto escrito, flechas o anotaciones y dónde está cada cosa. "
+                "Después resume qué quiere el cliente y cuál es el objetivo del producto. Máximo 5 frases. "
+                "Si la idea es muy grande, define un alcance que quepa en un solo archivo HTML, pero sin "
+                "cambiar la esencia de lo que pidió.")
 
     def trabajar(self, proyecto):
         pedido = f"Idea del cliente: {proyecto.idea or '(ver la imagen del boceto)'}"
@@ -92,7 +102,7 @@ class ProductManager(Agente):
                 "No escribas código, HTML ni bloques ```; tú solo escribes requisitos, el código lo hace otro.")
 
     def trabajar(self, proyecto):
-        texto = self.pensar(f"Resumen de la CEO:\n{proyecto.resumen}")
+        texto = self.pensar(f"Resumen de la CEO:\n{proyecto.resumen}", proyecto)
         if texto.lstrip().startswith("```"):  # por si el modelo lo envuelve en un bloque de código
             texto = self.bloque(texto, r"\w*")
         proyecto.requisitos = texto
@@ -111,7 +121,7 @@ class Arquitecto(Agente):
                 "de 2 frases sobre las decisiones de diseño.")
 
     def trabajar(self, proyecto):
-        respuesta = self.pensar(f"Requisitos:\n{proyecto.requisitos}")
+        respuesta = self.pensar(f"Requisitos:\n{proyecto.requisitos}", proyecto)
         proyecto.diseno_uml = self.bloque(respuesta, "mermaid")
         explicacion = re.sub(r"```[\s\S]*?```", "", respuesta).strip()
         yield self.decir(proyecto.diseno_uml, "uml")
@@ -135,10 +145,11 @@ class Programador(Agente):
                       f"\n\nCorrígelos y regresa el archivo completo.\n\nCÓDIGO:\n```html\n{proyecto.codigo}\n```")
             aviso = "Corrección aplicada. Envío la versión {n} a revisión"
         else:
-            pedido = (f"Requisitos:\n{proyecto.requisitos}\n\nDiagrama de clases:\n"
+            pedido = (f"Lo que pidió el cliente, según la CEO:\n{proyecto.resumen}\n\n"
+                      f"Requisitos:\n{proyecto.requisitos}\n\nDiagrama de clases:\n"
                       f"```mermaid\n{proyecto.diseno_uml}\n```")
             aviso = "Primera versión lista. Envío la versión {n} a revisión"
-        proyecto.codigo = self.bloque(self.pensar(pedido), "html")
+        proyecto.codigo = self.bloque(self.pensar(pedido, proyecto), "html")
         proyecto.intentos += 1
         lineas = proyecto.codigo.count("\n") + 1
         yield self.decir(aviso.format(n=proyecto.intentos) + f" ({lineas} líneas de código).")
